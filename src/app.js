@@ -3,6 +3,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const medicineRoutes = require('./routes/medicineRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
+const saleRoutes = require('./routes/saleRoutes');
 
 
 const app = express();
@@ -15,6 +16,8 @@ app.use('/api/categories',categoryRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/sales', saleRoutes);
+
 
 
 //Rootendpoint
