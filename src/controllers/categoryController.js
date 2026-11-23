@@ -1,125 +1,48 @@
-const pool = require('../config/db');
-const categoryService = require ('../service/categoryService');
+const categoryService = require('../service/categoryService');
 
-const getCategories = async (req,res)=>{
-    try{
-        const result = await categoryService.getAll();
-        res.status(200).json(result);
-    }catch(error){
-        console.error(error.message);
-        res.status(500).json({
-            message: 'Internal server error'
-        });
-        
-    }
-}
+const getCategories = async (req, res) => {
+    const result = await categoryService.getAll();
+    res.status(200).json(result);
+};
 
-const getCategoryById = async (req,res)=>{
-    try{
-        const {id} = req.params;
-        const result =await categoryService.getById(id);
-        res.status(200).json(result);
-    }catch(error){
-        const statusCode = error.statusCode || 500;
+const getCategoryById = async (req, res) => {
+    const { id } = req.params;
+    const result = await categoryService.getById(id);
 
-        if (statusCode === 500) {
-            console.error(error.message);
-        }
+    res.status(200).json(result);
+};
 
-        return res.status(statusCode).json({
-            error: statusCode === 404
-                ? error.message
-                : 'Internal Server Error'
-        });
-    }
-}
+const createCategory = async (req, res) => {
+    const category = await categoryService.createCategory(req.body);
 
-const createCategory = async(req,res)=>{
-    try{
-        const category = await categoryService.createCategory(req.body);
-        return res.status(201).json({
-            message: 'category created successfully',
-            category
-        });
-    }catch(error){
-        if(error.code === '23505'){
-            return res.status(400).json({
-                message:'category name already exists'
-            });
-        }
+    res.status(201).json({
+        message: 'Category created successfully',
+        category
+    });
+};
 
-        const statusCode = error.statusCode || 500;
-        if (statusCode === 500) {
-            console.error(error.message);
-        }
+const updateCategory = async (req, res) => {
+    const { id } = req.params;
+    const category = await categoryService.updateCategory(id, req.body);
 
-        return res.status(statusCode).json({
-            message: statusCode === 500
-                ? 'Internal Server Error'
-                : error.message
-        });
-    }
-}
+    res.status(200).json({
+        message: 'Category updated successfully',
+        category
+    });
+};
 
-const updateCategory = async(req,res)=>{
-    try{
-        const {id} =req.params;
-        const category = await categoryService.updateCategory(id, req.body);
+const deleteCategory = async (req, res) => {
+    const { id } = req.params;
+    const category = await categoryService.deleteCategory(id);
 
-        return res.status(200).json({
-            message: 'category updated successfully',
-            category
-        });
+    res.status(200).json({
+        message: 'Category deleted successfully',
+        category
+    });
+};
 
-    }catch(error){
-        if(error.code === '23505'){
-            return res.status(409).json({
-                message: 'category name already exists'
-            });
-        }
-
-        const statusCode = error.statusCode || 500;
-        if (statusCode === 500) {
-            console.error(error.message);
-        }
-
-        return res.status(statusCode).json({
-            message: statusCode === 500
-                ? 'Internal server error'
-                : error.message
-        });
-    }
-}
-
-const deleteCategory = async(req,res)=>{
-    try{
-        const {id}=req.params;
-        
-        const category = await categoryService.deleteCategory(id);
-        return res.status(200).json({
-            message: 'category deleted successfully',
-            category
-        });
-    }catch(error){
-        if(error.code === '23503'){
-            return res.status(400).json({
-                message: 'cannot delete category with associated with medicines'
-            })
-        }
-        const statusCode = error.statusCode || 500;
-        if (statusCode === 500) {
-            console.error(error.message);
-        }
-
-        return res.status(statusCode).json({
-            message: statusCode === 500
-                ? 'Internal server error'
-                : error.message
-        });
-    }
-}
-
-module.exports = {getCategories,
+module.exports = {
+    getCategories,
     getCategoryById,
     createCategory,
     updateCategory,

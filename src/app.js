@@ -5,6 +5,8 @@ const supplierRoutes = require('./routes/supplierRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
 const saleRoutes = require('./routes/saleRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const notFound = require('./middleware/notFound');
+const errorHandler = require('./middleware/errorHandler');
 
 
 const app = express();
@@ -27,5 +29,8 @@ app.get('/',(req,res)=>{
     res.send('Express server is running');
 })
 
+// 404 and Error Handling Middleware
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;

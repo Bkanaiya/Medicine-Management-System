@@ -6,6 +6,26 @@ const createServiceError = (message, statusCode) => {
     return error;
 };
 
+
+const translatePurchaseDatabaseError = (error, foreignKeyMessage) => {
+    if (
+        error.code === '23505' &&
+        error.constraint === 'unique_supplier_invoice'
+    ) {
+        return createServiceError(
+            'Invoice number already exists for this supplier',
+            409
+        );
+    }
+
+    if (error.code === '23503' && foreignKeyMessage) {
+        return createServiceError(foreignKeyMessage, 409);
+    }
+
+    return error;
+};
+
+
 const isValidDate = (date) => {
     if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return false;
@@ -206,7 +226,7 @@ const createPurchase = async (purchaseData) => {
         return purchase;
     } catch (error) {
         await client.query('ROLLBACK');
-        throw error;
+        throw translatePurchaseDatabaseError(error);
     } finally {
         client.release();
     }
@@ -274,7 +294,10 @@ const updatePurchase = async (id, purchaseData) => {
         return purchase;
     } catch (error) {
         await client.query('ROLLBACK');
-        throw error;
+        throw translatePurchaseDatabaseError(
+            error,
+            'Purchase items cannot be changed because they are referenced by another record'
+        );
     } finally {
         client.release();
     }

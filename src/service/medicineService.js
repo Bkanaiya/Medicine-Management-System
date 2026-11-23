@@ -6,6 +6,34 @@ const createServiceError = (message, statusCode) => {
     return error;
 };
 
+const validateMedicineId = (id) => {
+    if (
+        typeof id !== 'string' ||
+        !/^\d+$/.test(id) ||
+        !Number.isSafeInteger(Number(id)) ||
+        Number(id) <= 0
+    ) {
+        throw createServiceError('Invalid medicine id', 400);
+    }
+
+    return Number(id);
+};
+
+const translateMedicineDatabaseError = (error, operation) => {
+    if (
+        error.code === '23503' &&
+        operation === 'delete' &&
+        error.constraint === 'purchase_items_medicine_id_fkey'
+    ) {
+        return createServiceError(
+            'Cannot delete medicine because it is referenced by purchase records',
+            409
+        );
+    }
+
+    return error;
+};
+
 const getAll = async ()=>{
     const result = await pool.query(
         `SELECT medicines.*, categories.name AS category_name
@@ -15,26 +43,25 @@ const getAll = async ()=>{
     return result.rows;
 };
 
-const getById = async (id)=>{
+const getById = async (id) => {
+    const medicineId = validateMedicineId(id);
+
     const result = await pool.query(
         `SELECT medicines.*,
         categories.name AS category_name
         FROM medicines
         JOIN categories
-        ON medicines.category_id =categories.id
-        wHERE medicines.id = $1`,
-        [id]
+        ON medicines.category_id = categories.id
+        WHERE medicines.id = $1`,
+        [medicineId]
     );
 
-    if (result.rows.length===0){
-        const error = new Error('Medicine not found');
-        error.statusCode=404;
-        throw error;
+    if (result.rows.length === 0) {
+        throw createServiceError('Medicine not found', 404);
     }
 
     return result.rows[0];
-}
-
+};
 const createMedicine = async ({
     name,
     brand,
@@ -129,13 +156,11 @@ const updateMedicine = async ({
     id
 })=>{
     // validate medicine id
-    if(!Number.isInteger(Number(id)) || Number(id)<=0){
-        throw createServiceError('Invalid medicine id',400);
-    }
+    const medicineId = validateMedicineId(id);
     // check whether medecine exists
     const medicineResult = await pool.query(
         'SELECT * FROM medicines WHERE id = $1',
-        [id]
+        [medicineId]
     );
     if (medicineResult.rows.length === 0){
         throw createServiceError('Medicine not found',404);
@@ -206,12 +231,12 @@ const updateMedicine = async ({
         [
         name.trim(),
         brand || null,
-        Number(category_id),
+        category_id,
         unit.trim(),
         selling_price,
         prescription_required ?? false,
         is_active ?? true,
-        id
+        medicineId
         ]
     );
 
@@ -221,19 +246,24 @@ const updateMedicine = async ({
     };
 };
 
-const deleteMedicine = async (id)=>{
-    if (!Number.isInteger(Number(id)) || Number(id) <= 0){
-        throw createServiceError('Invalid medicine id',400) 
-    }
-    const result = await pool.query(
-        'DELETE FROM medicines WHERE id = $1 RETURNING *',
-        [id]
-    );
+const deleteMedicine = async (id) => {
+    const medicineId = validateMedicineId(id);
 
-    if (result.rows.length === 0){
-        throw createServiceError('Medicine not found',404);
+    try {
+        const result = await pool.query(
+            'DELETE FROM medicines WHERE id = $1 RETURNING *',
+            [medicineId]
+        );
+
+        if (result.rows.length === 0) {
+            throw createServiceError('Medicine not found', 404);
+        }
+
+        return result.rows[0];
+
+    } catch (error) {
+        throw translateMedicineDatabaseError(error, 'delete');
     }
-    return result.rows[0];
 };
 
 module.exports = {getAll,
